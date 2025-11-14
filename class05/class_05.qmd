@@ -1,0 +1,221 @@
+---
+title: "Class05: Data Viz with ggplot"
+author: "Emily Chase (PID: A14656894)"
+format: pdf
+---
+
+Today we are playing with (gg)-plotting and graphics. 
+
+There are *loads* of ways to make cool figures in R.
+
+- There is "base" R graphics (`plot()`, `hist()`, `boxplot()`, etc)
+
+- There are also add-on packages like **ggplot**
+
+```{r}
+# cars --> prints the entire thing when rendered
+head(cars, 5)
+```
+
+## Let's plot this with "base" R:
+
+```{r}
+
+plot(cars)
+
+```
+
+Let's plot `mpg` vs `disp`
+
+```{r}
+plot(mtcars$mpg, mtcars$disp)
+```
+
+
+```{r}
+hist(mtcars$mpg)
+```
+
+
+##  Now: ggplot
+
+The main function in the ggplot2 package is `ggplot()`. First step if never used before is to install via `install.package(<package_you_want>)`. You can put this in quarto but every time you render it'll install the software, so you should do it in the R console. I've already installed this so now I just want to load it in.
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(cars) + 
+  aes(x=speed, y=dist) + 
+  geom_point() 
+```
+
+Every ggplot needs
+- **data** layer
+- **aesthetic** layer
+- **geom** layer
+
+## Adding more layers
+
+Add a line?
+
+```{r}
+ggplot(cars) + 
+  aes(x=speed, y=dist) + 
+  geom_point() +
+  geom_line()
+```
+
+...What about a fit line?
+
+```{r}
+ggplot(cars) + 
+  aes(x=speed, y=dist) + 
+  geom_point() +
+  geom_smooth()
+```
+
+
+
+```{r}
+cars
+ggplot(cars) + 
+  aes(x=speed, y=dist) + 
+  geom_point() +
+  labs(title="Speed vs Stopping Distances of Cars",
+       x="Speed (MPH)",
+       y="Stopping Distance (ft)",
+       subtitle="Linear relationship",
+       caption="Dataset: 'cars'")   +
+  geom_smooth(method="lm", se=FALSE) +
+  theme_classic()
+```
+
+
+## Now we will plot some expression data
+
+```{r}
+url <- "https://bioboot.github.io/bimm143_S20/class-material/up_down_expression.txt"
+genes <- read.delim(url)
+head(genes)
+```
+> Q1 How many genes are in this wee dataset?
+
+There are `r nrow(genes)` in this dataset
+
+```{r}
+nrow(genes)
+```
+
+> Q2 How many columns and what are their names?
+
+```{r}
+colnames(genes)
+ncol(genes)
+```
+> Q3 How many up-regulated genes are there?
+
+```{r}
+sum(genes$State == "up") # returns logicals in the df, then sum it
+
+# another way to get the number of occurences of things in a vector
+table(genes$State)
+```
+
+> Q4 What percentage of genes are upregulated?
+
+```{r}
+tot_up = sum(genes$State == "up")
+pct_up = tot_up/nrow(genes) * 100
+print(pct_up)
+```
+
+> Plot the up/down regulated genes
+
+```{r}
+ggplot(genes) +
+  aes(Condition1, Condition2, color=State) +
+  geom_point()
+```
+
+```{r}
+p <- ggplot(genes) +
+  aes(Condition1, Condition2, color=State) +
+  geom_point() + 
+  scale_color_manual(values=c("blue", "grey", "red")) +
+  theme_bw()
+p
+```
+
+
+```{r}
+p+labs(title="Pretty rna seq data") 
+```
+
+## What if we added labels in aesthetic mappings?
+
+```{r}
+ggplot(genes) +
+  aes(Condition1, Condition2, color=State, label=Gene) +
+  geom_point() + 
+  scale_color_manual(values=c("blue", "grey", "red")) +
+  theme_bw() +
+  geom_text()
+```
+
+Yoinks
+
+
+### Let's install a package that will help with labels
+`install.packages("ggrepel")`
+
+```{r}
+library(ggrepel)
+```
+
+
+
+```{r}
+ggplot(genes) +
+  aes(Condition1, Condition2, color=State, label=Gene) +
+  geom_point() + 
+  scale_color_manual(values=c("blue", "grey", "red")) +
+  theme_bw() +
+  geom_text_repel(max.overlaps = 50)
+```
+
+
+## Making panels:
+
+```{r}
+# File location online
+url <- "https://raw.githubusercontent.com/jennybc/gapminder/master/inst/extdata/gapminder.tsv"
+
+gapminder <- read.delim(url)
+```
+
+
+```{r}
+tail(gapminder)
+```
+
+
+```{r}
+ggplot(gapminder) +
+  aes(gdpPercap, lifeExp, color=continent, size=pop) +
+  geom_point(alpha=0.5) +
+  facet_wrap(~continent) +
+  theme_bw()
+```
+
+
+```{r}
+ggplot(gapminder) +
+  aes(lifeExp, fill=continent, size=pop) +
+  geom_density(alpha=0.5, color="pink") +
+  theme_classic() +
+  labs(title="YUH")
+```
+
+
