@@ -1,0 +1,154 @@
+---
+title: "Functions in R"
+author: "Emily Chase (PID: A14656894)"
+format: pdf
+toc: TRUE
+---
+
+
+
+## Write a function that adds numbers
+```{r}
+add <- function(x, y=1){
+  x+y
+  
+}
+```
+
+Call the function
+
+```{r}
+add(10,100)
+```
+
+## Another function
+
+Write a function to generate random nucleotide sequeces of a user specified length:
+
+The `sample` function can be helpful here. It samples randomly from an input vector. 
+
+```{r}
+
+sample(c("A", "C", "G", "T"), size=5, replace=TRUE) # can only have size>n if replace=TRUE
+
+```
+
+`sample` gives us a vector, but what if we want a fasta format instead? ie a 1 element long character vector
+
+```{r}
+
+s <- sample(c("A", "C", "G", "T"), size=5, replace=TRUE) # can only have size>n if replace=TRUE
+paste(s, collapse="")
+```
+
+We can use `paste` (kinda like `join` in python). `paste` has two arguments that are new to me though:
+
+1. `collapse` = ___ ~ determines what will separate **ELEMENTS** in a vector
+
+2. `sep` = ___ ~ determines what will separate **arguments**. you can give `paste` multiple vectors and it will combine them pair-wise, and you can tell it what to separate those pairs by.
+
+
+### Conditionals interlude
+
+
+```{r}
+fasta <- TRUE
+if (fasta){
+  cat("HELLO WORLD!")
+} else {
+  cat("NOPE")
+}
+```
+
+```{r}
+# what's cat()
+
+print("HI")
+print(c("HI", "BYE"))
+cat(c("HI", "BYE"))
+```
+
+### Now integrate it into functions
+
+Add the ability to return a multi element vector or a single element fasta like vector
+
+
+```{r}
+generate_fasta <- function(size=50, fasta=TRUE){
+  v <- sample(c("A", "G", "C","T"), size=size, replace=TRUE)
+  
+  
+  if (fasta){
+    ans <- paste(v, collapse="")
+    return(ans)
+  } else {
+    return(v)
+  }
+  
+}
+
+generate_fasta(fasta=TRUE)
+generate_fasta(fasta=FALSE)
+```
+
+
+# Design a protein generating function
+
+
+```{r}
+generate_pfasta <- function(size=50, fasta=TRUE){
+  v <- sample(c("A", "R", "N", "D", "C", "Q", "E", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V"), size=size, replace=TRUE)
+  
+  
+  if (fasta){
+    ans <- paste(v, collapse="")
+    return(ans)
+  } else {
+    return(v)
+  }
+  
+}
+
+generate_pfasta(fasta=TRUE)
+generate_pfasta(fasta=FALSE)
+```
+
+```{r}
+generate_pfasta(6)
+```
+
+## Generate sequences length between 6 and 12
+Use our new `generate_pfasta()` function to make random protein sequences of length 6 to 12 (ie one length 6, one length 7, up to len 12)
+
+```{r}
+# brute force
+generate_pfasta(6)
+generate_pfasta(7)
+generate_pfasta(8)
+
+```
+
+```{r}
+# using a for loop
+
+#less efficient
+lengths <- 6:12
+for(i in lengths){
+  cat(">",i, "\n", sep="")
+  aa <- generate_pfasta(i)
+  cat(aa)
+  cat("\n")
+}
+
+```
+
+```{r}
+# more efficient
+
+sapply(lengths,generate_pfasta)
+```
+
+
+## Search in BLAST
+
+

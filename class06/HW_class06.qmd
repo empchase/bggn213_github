@@ -1,0 +1,208 @@
+---
+title: "HW: Class 06"
+author: "Emily Chase (PID: A14656894)"
+format: pdf
+toc: TRUE
+---
+
+# Section 1: Improving analysis code by writing functions
+
+## (A) Can you improve this analysis code?
+
+```{r}
+
+df <- data.frame(a=1:10, b=seq(200,400,length=10),c=11:20,d=NA)
+
+head(df)
+```
+
+```{r}
+df$a <- (df$a - min(df$a)) / (max(df$a) - min(df$a))
+df$b <- (df$b - min(df$a)) / (max(df$b) - min(df$b))
+df$c <- (df$c - min(df$c)) / (max(df$c) - min(df$c))
+df$d <- (df$d - min(df$d)) / (max(df$a) - min(df$d)) 
+
+head(df)
+```
+
+### Improved:
+
+```{r}
+# initiate the df
+df <- data.frame(a=1:10, b=seq(200,400,length=10),c=11:20,d=NA)
+
+# define a function
+scale_down <- function(x){
+  ans <- (x - min(x)) / (max(x) - min(x))
+  return(ans)
+  
+}
+
+# loop the function 
+for (col in colnames(df)){
+  df[[col]] <- scale_down(df[[col]])
+}
+
+head(df)
+```
+
+### Even cleaner
+
+```{r}
+# initiate the df
+df <- data.frame(a=1:10, b=seq(200,400,length=10),c=11:20,d=NA)
+
+# define a function
+scale_down2 <- function(x){
+  ans <- (x - min(x)) / (max(x) - min(x))
+  return(ans)
+  
+}
+
+# apply() the function 
+
+df_scaled <- as.data.frame(lapply(df, scale_down2))
+head(df_scaled)
+```
+
+## (B) Improve another code chunk, then answer Q1-6
+
+
+
+```{r}
+# install.packages("bio3d") # run in console
+library(bio3d)
+s1 <- read.pdb("4AKE") # kinase with drug
+s2 <- read.pdb("1AKE") # kinase no drug
+s3 <- read.pdb("1E4Y") # kinase with drug
+s1.chainA <- trim.pdb(s1, chain="A", elety="CA")
+s2.chainA <- trim.pdb(s2, chain="A", elety="CA")
+s3.chainA <- trim.pdb(s3, chain="A", elety="CA")
+s1.b <- s1.chainA$atom$b
+s2.b <- s2.chainA$atom$b
+s3.b <- s3.chainA$atom$b
+plotb3(s1.b, sse=s1.chainA, typ="l", ylab="Bfactor")
+plotb3(s2.b, sse=s2.chainA, typ="l", ylab="Bfactor")
+plotb3(s3.b, sse=s3.chainA, typ="l", ylab="Bfactor")
+
+```
+
+### Improve the code
+
+```{r}
+protein_drug_analysis <- function(kin) {
+  "
+  Function takes:
+  kin - character string; PDB identifier
+  
+  Function returns:
+  B factor vector of chain A alpha carbons
+  
+  Notes: bio3d must be loaded prior to running
+  "
+
+  # read pdb
+  seq <-  read.pdb(kin)
+  ## trim
+  seq.chainA <- trim.pdb(seq, chain="A", elety="CA")
+  ## initiate new variables
+  seq.atomB <- seq.chainA$atom$b
+  # plot the new variables
+  plotb3(seq.atomB, sse=seq.chainA, typ="l", ylab="Bfactor") 
+  # return B factor vector for downstream analysis
+  return(seq.atomB)
+  }
+
+  
+
+```
+
+```{r}
+  
+# load library?
+library(bio3d)
+protein_drug_analysis("4AKE")
+protein_drug_analysis("1AKE")
+protein_drug_analysis("1E4Y")
+```
+
+> Q1 What type of object is returned from the read.pdb() function? 
+
+```{r}
+typeof(s1)
+```
+
+read.pdb() returns a list
+
+> Q2 What does the trim.pdb() function do?
+
+```{r}
+s1
+s1.chainA
+```
+
+trim.pdb() selects a subset of atoms from an initial PDB object.
+
+
+> Q3 What input parameter would turn off the marginal black and grey rectangles in the
+plots and what do they represent in this case?
+
+```{r}
+args(plotb3)
+
+plotb3(s3.b, sse=s3.chainA, typ="l", ylab="Bfactor", top=FALSE, bot=FALSE)
+```
+
+`top=FALSE, bot=FALSE` would turn off the rectangles, which represent secondary structures alpha helix and beta sheet.
+
+> Q4 What would be a better plot to compare across the different proteins?
+
+I think a plot that overlayed the proteins by residue would be best for comparison.
+
+> Q5 Which proteins are more similar to each other in their B-factor trends. How could
+you quantify this?
+
+```{r}
+hc <- hclust( dist( rbind(s1.b, s2.b, s3.b) ) )
+plot(hc)
+```
+
+According to documentation, `rbind()` combines the matrices, `dist()` computes the pairwise distance and `hclust()` performs clustering based on these distances.
+
+By plotting we can see that s2 and s3 are more similar.
+
+> Q6 How would you generalize the original code above to work with any set of input
+protein structures?
+
+```{r}
+gen_protein_drug_analysis <- function(pdb_id, chain="A", elety="CA") {
+  "
+  Function takes:
+  kin - character string; PDB identifier
+  
+  Function returns:
+  B factor vector of a PDB protein
+  
+  Notes: bio3d must be loaded prior to running
+  "
+
+  # read pdb
+  seq <-  read.pdb(pdb_id)
+  ## trim
+  seq.chainA <- trim.pdb(seq, chain=chain, elety=elety)
+  ## initiate new variables
+  seq.atomB <- seq.chainA$atom$b
+  # plot the new variables
+  plotb3(seq.atomB, sse=seq.chainA, typ="l", ylab="Bfactor") 
+  # return B factor vector for downstream analysis
+  return(seq.atomB)
+  }
+
+
+```
+
+
+```{r}
+gen_protein_drug_analysis("4AKE")
+```
+

@@ -1,0 +1,261 @@
+---
+title: "Class 09: Structural Bioinformatics pt. 1"
+author: "Emily Chase (PID: A14656894)"
+format: pdf
+toc: true
+---
+
+## The PDB Database
+
+The main repository for biomolecular structure data is the Protein Data Bank (PDB) https://www.rcsb.org .
+
+Let's have a quick look at the composition of this database:
+
+```{r}
+pdb_stats <- read.csv("Data Export Summary.csv", row.names=1)
+tail(pdb_stats)
+```
+
+I need to convert to numeric
+
+```{r}
+# This was my strategy but it sounds like Barry has a different approach
+
+# pdb_stats$X.ray <- as.numeric(gsub(",", "", pdb_stats$X.ray))
+# pdb_stats$EM <- as.numeric(gsub(",", "", pdb_stats$EM))
+# pdb_stats$Total <- as.numeric(gsub(",", "", pdb_stats$Total))
+
+# Barry's approach
+
+# install("readr")
+library(readr)
+stats <- read_csv("Data Export Summary.csv")
+head(stats)
+
+```
+
+
+
+> Q1: What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy.
+
+```{r}
+totstructures <- sum(stats$Total)
+xray <- sum(stats$"X-ray")
+em <- sum(stats$EM)
+
+round((xray)/totstructures * 100, 2)
+
+round(em/totstructures * 100, 2)
+```
+
+Xray methods are `r round((xray)/totstructures * 100, 2)` % and EM methods are `r round(em/totstructures * 100, 2)`% of structures.
+
+> Q2: What proportion of structures in the PDB are protein?
+
+```{r}
+pdb_proteins <- stats$Total[1]
+round(pdb_proteins/totstructures * 100,2)
+```
+
+> Q3: Make a bar plot overview of molecular type composition using gplot
+
+
+```{r}
+library(ggplot2)
+
+ggplot(stats) + aes(x=`Molecular Type`, y=Total) + geom_col()
+```
+
+Extra exercise:
+
+```{r}
+
+library(tidyr)
+
+# Pivot to long format
+df_long <- pivot_longer(
+  stats,
+  cols = c("X-ray", "EM", "NMR", "Multiple methods", "Neutron", "Other"),
+  names_to = "Method",
+  values_to = "Count"
+)
+
+head(df_long)
+
+ggplot(df_long) + aes(x=`Molecular Type`, y= Count, fill= Method) + geom_bar(stat = "identity") + labs(y = "Total", x = "Molecular Type", fill = "Method") 
+```
+
+
+## Visualizing structure data
+
+The mol* viewer is embedded in many bioinformatics websites. The homepage is https://molstar.org
+
+I can insert/render any figure or image file using markdown format:
+
+![The HIV-Pr dimer with bound inbibitor](1HSG.png)
+
+
+![The HIV-Pr dimer, reactive aspartic acid (D25) and important H20 (308) are highlighted](1HSG_water308.png)
+
+
+## Bio3D package for structural bioinformativs
+
+We can use the bio3d package to read and analyze biomolecular data in R:
+
+```{r}
+library(bio3d)
+
+hiv <- read.pdb("1hsg")
+hiv
+```
+
+```{r}
+head(hiv$atom)
+```
+
+Let's get the sequence
+
+```{r}
+pdbseq(hiv)
+```
+
+Let's trim to just chain A and get just that chain's sequence:
+
+```{r}
+
+HIV_A <- trim.pdb(hiv, chain="A")
+HIV_A.seq <- pdbseq(HIV_A)
+HIV_A.seq
+
+```
+
+I want to blast it
+
+```{r blast_hiv, cache=TRUE}
+# the above extra code is useful if you'll need to render the document but you don't want to re-run a computationally intensive task (or one that simply takes a long time)
+blast <- blast.pdb(HIV_A.seq)
+```
+
+```{r}
+head(blast$hit.tbl)
+```
+
+What if you plot the blast results
+```{r}
+
+hits<-plot(blast)
+```
+
+```{r}
+hits$pdb.id
+
+```
+
+
+## Prediction of functional motions
+
+We can run a Normal Mode Analysis (NMA) to predict large scale motions/flexibility/dynamics of any biomolecule that we can read into R.
+
+Let's look at ADK
+
+```{r}
+adk <- read.pdb("1ake")
+
+adk_A <- trim(adk, chain="A")
+adk_A
+```
+
+
+```{r}
+m <- nma(adk_A)
+plot(m)
+```
+
+Let's write out a "trajectory" of predicted motion
+
+```{r}
+mktrj(m, file="adk_nma.pdb")
+```
+
+You can load this into molstar and play the movie!
+
+
+## Play with 3D viewing in R
+
+We can use the new **bio3dview** package, which is not yet on CRAN, to render interactive 3D views in R and HTML quarto output reports.
+
+To install from github, we can use the **pak** package.
+
+
+```{r}
+# install.packages("pak")
+# 
+# pak::pak("bioboot/bio3dview")
+
+
+```
+
+
+
+# November 5, continuation
+
+## Comparative analysis of protein structures
+
+From a sequence (or structure ID), we can blast against PDB and get a homologous structure set ( a set of similar structures ). We can then align and quantitatively analyze the structural data (eg via PCA).
+
+```{r}
+library(bio3d)
+id <- "1ake_A"
+
+aa <- get.seq(id)
+aa
+```
+
+Use the sequence to find homologs
+
+```{r, cache=TRUE}
+blast <- blast.pdb(aa)
+hits <- plot(blast)
+```
+
+
+```{r}
+hits$pdb.id
+```
+
+Find and download the structures for the hits (put in subfolder to keep tidy and gzip because we're all on the wifi)
+
+```{r}
+# Download related PDB files
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+
+
+```
+
+We can visualize all of these simultaneously on molstar.org ... but it's not really helpful to simply visualize. So we are going to align first.
+
+
+```{r}
+# install.packages("BiocManager")
+library(BiocManager)
+# Align releated PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+
+```{r}
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+PC1 captures 91.3% of the variance within the dataset. According to the scree plot in the bottom right, we only need 2 PCs to get a sense for how the data is grouped.
+
+```{r}
+plot(pc.xray, 1:2)
+```
+
+```{r}
+mktrj(pc.xray, file="pca_results.pdb")
+```
+
+Visualize on molstar

@@ -1,0 +1,279 @@
+---
+title: "Class 8 Mini Project"
+author: "Emily Chase (PID A14656894)"
+format: pdf
+toc: true
+---
+
+## Background
+
+Extend what you’ve learned by combining PCA as a preprocessing step to clustering using data that consist of measurements of cell nuclei of human breast masses.
+
+The data itself comes from the Wisconsin Breast Cancer Diagnostic Data Set first reported by K. P. Benne and O. L. Mangasarian: “Robust Linear Programming Discrimination of Two Linearly Inseparable Sets”.
+
+Values in this data set describe characteristics of the cell nuclei present in digitized images of a fine needle aspiration (FNA) of a breast mass.
+
+## Data Import
+
+```{r}
+fna.data <- "WisconsinCancer.csv"
+
+# We'll use the identifiers as names (ie don't leave them in the df) so that it doesn't accidentally become part of our analysis downstream
+wisc.df <- read.csv(fna.data, row.names=1) 
+colnames(wisc.df)
+```
+
+
+Since our analysis is going to be unsupervised, we are going to take out the "answers" (the professional diagnosis)
+
+```{r}
+# We can use -1 here to remove the first column
+wisc.data <- wisc.df[,-1]
+# save the excluded column
+diagnosis <- as.factor(wisc.df$diagnosis)
+
+
+head(wisc.data[,1:3])
+```
+>Q1. How many observations are in this dataset?
+
+```{r}
+nrow(wisc.df)
+```
+There are `r nrow(wisc.data)` observations/samples/patients in the data set.
+
+>Q2. How many of the observations have a malignant diagnosis?
+
+```{r}
+sum(wisc.df$diagnosis == "M")
+table(wisc.df$diagnosis)
+```
+ There are `sum(wisc.df$diagnosis == "M")` malignant diagnoses.
+
+>Q3. How many variables/features in the data are suffixed with _mean?
+
+```{r}
+length(grep("_mean",colnames(wisc.df)))
+```
+
+There are `length(grep("_mean",colnames(wisc.df)))` columns that give a mean summary value.
+
+
+## PCA
+
+The main function in base R for PCA is called `prcomp()`. It has arguments x, scale=F, center=T. Center is about whether they should zero center the data (subtract by the mean to have mean 0). *scale* is about whether the data should be scaled to have unit variance. PCA will unfairly be influenced by the columns that have the most variance. Some columns will have more variance just because you picked a different unit.
+
+**You almost always want to scale your data.** This means you'll always set the argument `scale=TRUE`.
+
+It is important to check if the data need to be scaled before performing PCA. Recall two common reasons for scaling data include:
+
+- The input variables use different units of measurement.
+- The input variables have significantly different variances.
+
+
+Check the mean and standard deviation of the features (i.e. columns) of the wisc.data to determine if the data should be scaled. Use the colMeans() and apply() functions like you’ve done before.
+
+```{r}
+colMeans(wisc.data)
+
+apply(wisc.data,2,sd)
+```
+
+
+```{r}
+wisc.pr <- prcomp(wisc.data, scale=TRUE)
+summary(wisc.pr)
+```
+
+Let's make our main result figure - the "PC Plot" or "score plot", "ordination plot", etc
+
+```{r}
+head(wisc.pr$x)
+```
+
+
+```{r}
+library(ggplot2)
+
+ggplot(wisc.pr$x) +aes(x=PC1, y=PC2, col=diagnosis) + geom_point()
+
+```
+
+
+
+```{r}
+summary(wisc.pr)
+```
+
+>Q4. From your results, what proportion of the original variance is captured by the first principal components (PC1)?
+
+44.27% of the original variance is described by PC1.
+
+>Q5. How many principal components (PCs) are required to describe at least 70% of the original variance in the data?
+
+According to cumulative proportion of the variance, we see that the cumulative variance crosses the 70% threshold at PC3, so 3 PCs are required.
+
+
+>Q6. How many principal components (PCs) are required to describe at least 90% of the original variance in the data?
+
+7 PCs gets us to 91% cumulative variance.
+
+
+> Q7. What stands out to you about this plot? Is it easy or difficult to understand? Why?
+
+```{r}
+ggplot(wisc.pr$x) + aes(x=PC1, y=PC2) + geom_text(aes(label = rownames(wisc.pr$x)))
+```
+
+```{r}
+ggplot(wisc.pr$x) + aes(x=PC1, y=PC2) + geom_point()
+```
+
+Using text makes the overlapping data impossible to parse, but using points shows the spead a little more clearly. Still can't see the groupings well yet though because it's all in one color.
+
+
+> Q8. Generate a similar plot for principal components 1 and 3. What do you notice about these plots?
+
+```{r}
+ggplot(wisc.pr$x) + aes(x=PC1, y=PC3) + geom_point()
+```
+
+The data looks even messier using PC3 instead of PC2, because PC2 explains more variance than PC3.
+
+
+```{r}
+ggplot(wisc.pr$x) + aes(x=PC1, y=PC3, col=diagnosis) + geom_point()
+```
+
+
+### Calculate variance of each component
+
+
+```{r}
+pr.var <- wisc.pr$sdev^2
+head(pr.var)
+
+
+```
+
+```{r}
+# Variance explained by each principal component: pve
+pve <-  pr.var / sum(pr.var)
+pve
+# Plot variance explained for each principal component
+plot(pve, xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+
+```
+
+```{r}
+barplot(pve)
+```
+
+### Communicating PCA results
+
+>Q9. For the first principal component, what is the component of the loading vector (i.e. wisc.pr$rotation[,1]) for the feature concave.points_mean? This tells us how much this original feature contributes to the first PC.
+
+```{r}
+head(wisc.pr$rotation[,1:3], 10)
+```
+
+The loading for concave.points_mean is -0.26085376.
+
+
+
+## Hierarchical clustering
+
+>Q10. Using the plot() and abline() functions, what is the height at which the clustering model has 4 clusters?
+
+
+```{r}
+# Scale the wisc.data data using the "scale()" function
+data.scaled <- scale(wisc.data)
+data.dist <- dist(data.scaled)
+wisc.hclust <- hclust(data.dist, method="complete")
+
+plot(wisc.hclust)
+abline(h=18, col="red", lty=2)
+```
+
+
+```{r}
+wisc.hclust.clusters <- cutree(wisc.hclust, h=19)
+table(wisc.hclust.clusters, diagnosis)
+
+```
+
+### Using different methods
+
+> Q12. Which method gives your favorite results for the same data.dist dataset? Explain your reasoning.
+
+```{r}
+data.scaled <- scale(wisc.data)
+data.dist <- dist(data.scaled)
+
+wisc.hclust1 <- hclust(data.dist, method="complete")
+plot(wisc.hclust1)
+
+wisc.hclust2 <- hclust(data.dist, method="single") #weird and curvy
+plot(wisc.hclust2)
+
+wisc.hclust3 <- hclust(data.dist, method="average") # shows three distinctish groups
+plot(wisc.hclust3)
+
+wisc.hclust4 <- hclust(data.dist, method="ward.D2") # this is the clearest 
+plot(wisc.hclust4)
+
+```
+
+I like `ward.D2` the best. It shows the clearest differences between groups.
+
+
+
+## Combining PCA and Clustering
+
+Use knowledge from our PCA (eg our scree plots!) and using it to inform our dendrogram
+
+```{r}
+d <- dist(wisc.pr$x[,1:3]) # we know from our scree plot that we should just choose the first 3 PCs
+wisc.pr.hclust <- hclust(d, method="ward.D2")
+plot(wisc.pr.hclust)
+abline(h=70, col="red")
+```
+
+Get my cluster membership
+```{r}
+grps <- cutree(wisc.pr.hclust, h=70)
+table(grps)
+```
+
+```{r}
+table(diagnosis)
+```
+
+> Q13. How well does the newly created model with four clusters separate out the two diagnoses?
+
+Is my clustering capturing this B vs M? Let's compare our clusters (`grps`) in `diagnosis`.
+Make a wee "cross-table".
+
+```{r}
+table(grps,diagnosis)
+```
+
+True Positive = 179
+False Positive = 24 
+
+True Negative = 333
+False Negative = 33
+
+
+> Q14. How well do the hierarchical clustering models you created in previous sections (i.e. before PCA) do in terms of separating the diagnoses? Again, use the table() function to compare the output of each model (wisc.km$cluster and wisc.hclust.clusters) with the vector containing the actual diagnoses.
+
+```{r}
+table(wisc.hclust.clusters, diagnosis)
+```
+
+This comparison is a little trickier because it has four categories vs the binary diagnosis. But based on where the majority of the values lie, there are fewer false positives but more false negatives. I personally think false negatives are even scarier than false positives (false positives can mean further testing but false negatives can mean that no further investigation will happen)
+
+
