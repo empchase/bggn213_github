@@ -1,7 +1,7 @@
 ---
 title: "Class05: Data Viz with ggplot"
 author: "Emily Chase (PID: A14656894)"
-format: pdf
+format: gfm
 ---
 
 Today we are playing with (gg)-plotting and graphics. 
