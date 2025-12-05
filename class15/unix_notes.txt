@@ -1,0 +1,104 @@
+# this is the nano text editor - as simple as it comes. 
+
+## Here are the commands we've leared today in bash:
+- git : runs git commands
+- pwd : print working directory, how to print out where you "are" in your file system. Gives absolute path
+- cd : change directory, give it the relative path w/r to your current working directory, or an absolute path
+- ls : list, lists out the files/subdirectories in your current directory or in a specified file path
+- mkdir: make a directory (default argument is at the current working directory)
+- rm : removes everything in your directory downward if no argument. use it with an argument :)
+- nano : open up a text editor. give it a (new or not) file name to open/start a document to write on. 
+- cp : copy a file (cp source destination)
+- mv : rename or move a file (mv source destination)
+- less : to see the contents of a text file
+- whoami : tells you the computer username 
+- less : see the scrollable contents of text file
+- head : view the top lines of a file
+- grep : pattern match
+
+
+- absolute path : where stuff is, spelled out from the root of the file systems (eg /Users/emilychase/Desktop/phd/bggn213/class15)
+- relative path : where stuff is relative to where you are currently (ie your current working directory)
+
+- ~ : home directory
+- . : current directory
+- .. : parent directory
+- * : wild card (matches all characters)
+
+### Process control
+_ ^c : kill
+- ^z : sleep
+- fg : put the sleeping thing to run in the foreground
+- bg : put the sleeping thing to run in the background
+- top : display the top running processes in real time
+- ps : display the running commands
+- kill <PID> : kill a job with this PID
+
+blastp -query mm-second.fa -db zebrafish.1.protein.faa -out mm-second.x.zebrafish.tsv -outfmt 6 &
+    [1] 2173
+    ^^ & runs in background, PID gets printed
+
+## AWS server connection
+Open an SSH client.
+
+Locate your private key file. The key used to launch this instance is e1chase_bggn213.pem
+
+Run this command, if necessary, to ensure your key is not publicly viewable.
+chmod 400 "e1chase_bggn213.pem"
+
+Connect to your instance using its Public DNS:
+ec2-54-191-24-129.us-west-2.compute.amazonaws.com
+
+Example:
+
+ssh -i "e1chase_bggn213.pem" ubuntu@ec2-54-191-24-129.us-west-2.compute.amazonaws.com
+
+### To copy files
+scp -i "e1chase_bggn213.pem" ubuntu@ec2-54-191-24-129.us-west-2.compute.amazonaws.com:/home/ubuntu/work/mm-second.x.zebrafish.tsv .
+
+
+## Running BLAST on the command line
+
+- makeblastdb
+makeblastdb -in zebrafish.1.protein.faa -dbtype prot
+
+- blastp
+blastp -query mm-first.fa -db zebrafish.1.protein.faa > my_results.txt
+blastp -query mm-second.fa -db zebrafish.1.protein.faa -out my_2nd_results.txt
+
+
+# Friday November 21, 2025
+
+Restart instance and hit connect
+
+### Download
+curl -O https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz
+gunzip sratoolkit.current-ubuntu64.tar.gz
+tar -zxvf sratoolkit.current-ubuntu64.tar
+
+### get the path connected
+
+cd sratoolkit.3.2.1-ubuntu64/bin
+poo=/home/ubuntu/sratoolkit.3.2.1-ubuntu64/bin
+
+echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+export PATH=$PATH:/home/ubuntu/sratoolkit.3.2.1-ubuntu64/bin
+### now I can run commands like prefetch (downloads SRA entry?) and fastq-dump (gets fastq file)
+prefetch SRR2156849 SRR2156850 SRR2156851
+fastq-dump --split-3 SRR2156849 SRR2156850 SRR2156851
+
+kallisto quant -i hg19.ensembl -o SRR2156848_quant SRR2156848_1.fastq SRR2156848_2.fastq
+
+### Ran this in a script run_me.sh
+kallisto quant -i hg19.ensembl -o SRR2156849_quant SRR2156849_1.fastq SRR2156849_2.fastq
+kallisto quant -i hg19.ensembl -o SRR2156850_quant SRR2156850_1.fastq SRR2156850_2.fastq
+kallisto quant -i hg19.ensembl -o SRR2156851_quant SRR2156851_1.fastq SRR2156851_2.fastq
+
+
+
+
+bash scp -r -i "e1chase_bggn213.pem" ubuntu@ec2-35-87-109-42.us-west-2.compute.amazonaws.com:~/*_quant .
+
+scp -r -i "e1chase_bggn213.pem" 'ubuntu@ec2-35-87-109-42.us-west-2.compute.amazonaws.com:~/*_quant' .
+

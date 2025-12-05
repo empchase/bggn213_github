@@ -1,0 +1,214 @@
+---
+title: "Class 13: RNAseq mini project"
+author: "Emily Chase (PID A14656894)"
+format: pdf
+toc: true
+---
+
+
+## Background
+
+Today we will run through a complete RNAseq analysis pipeline.
+
+The data for comes from GEO entry: GSE37704, which is associated with the following publication:
+
+Trapnell C, Hendrickson DG, Sauvageau M, Goff L et al. "Differential analysis of gene regulation at transcript resolution with RNA-seq". Nat Biotechnol 2013 Jan;31(1):46-53. PMID: 23222703
+
+The authors report on differential analysis of lung fibroblasts in response to loss of the developmental transcription factor HOXA1. Their results and others indicate that HOXA1 is required for lung fibroblast and HeLa cell cycle progression. In particular their analysis show that "loss of HOXA1 results in significant expression level changes in thousands of individual transcripts, along with isoform switching events in key regulators of the cell cycle". For our session we have used their Sailfish gene-level estimated counts and hence are restricted to protein-coding genes only.
+
+## Data import
+```{r}
+counts <- read.csv("GSE37704_featurecounts.csv", row.names = 1)
+metadata <- read.csv("GSE37704_metadata.csv", )
+```
+
+Check correspondance of `metadata` and `counts`.
+
+```{r}
+colnames(counts)
+metadata
+```
+ Right now the metadata id's and the counts columns are not a 1:1 correspondance.
+ 
+```{r}
+colnames(counts) == metadata$id
+colnames(counts)[-1] == metadata$id
+```
+ Fix to remove that first "length" column of `counts`
+ 
+```{r}
+counts <- counts[,-1]
+head(counts, 3)
+```
+ 
+ Also let's remove low count genes
+ 
+```{r}
+tot.counts <- rowSums(counts)
+head(tot.counts)
+hist(log(tot.counts),)
+```
+ 
+```{r}
+nonzero.inds <- tot.counts != 0
+counts <- counts[nonzero.inds,]
+```
+ 
+ 
+ 
+```{r}
+# we can reuse this logical in the future
+test_cols <- !all(colnames(counts) == metadata$id)
+if (test_cols){
+  message("there's an error")
+} else {
+  message("no error")
+}
+```
+ 
+
+
+## Setup for DESeq
+
+```{r}
+library(DESeq2)
+
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=counts, 
+                              colData = metadata,
+                              design = ~condition)
+```
+
+```{r}
+
+dds <- DESeq(dds)
+
+```
+
+
+## Get results
+
+```{r}
+res <- results(dds)
+head(res,3)
+```
+
+
+## Add annotation
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+```{r}
+res$entrezid <- mapIds(org.Hs.eg.db, 
+                     keys=row.names(res), 
+                     keytype="ENSEMBL",        
+                     column="ENTREZID",         
+                     multiVals="first") 
+
+head(res$entrezid)
+```
+
+
+## Visualize results
+
+```{r}
+library(ggplot2)
+mycols <- rep("gray", nrow(res))
+mycols[abs(res$log2FoldChange) >= 2 & res$padj<0.05] <- "blue"
+
+ggplot(res) + aes(x=log2FoldChange, y=-log(padj), alpha = 0.05) + geom_point(col=mycols) + geom_vline(xintercept=c(-2, 2), col="red") + geom_hline(yintercept=-log(0.05), col="red")
+```
+
+##Pathway analysis
+
+```{r}
+library(gage)
+library(gageData)
+library(pathview)
+```
+
+
+```{r}
+data(kegg.sets.hs)
+
+# Examine the first 2 pathways in this kegg set for humans
+head(kegg.sets.hs, 2)
+```
+
+```{r}
+foldchanges <- res$log2FoldChange
+names(foldchanges) <- res$entrezid
+head(foldchanges)
+```
+
+```{r}
+keggres = gage(foldchanges, gsets=kegg.sets.hs)
+head(keggres$less)
+```
+
+```{r}
+pathview(gene.data=foldchanges, pathway.id="hsa04110")
+```
+
+
+![](hsa04110.pathview.png)
+
+## GO analysis
+
+```{r}
+data(go.sets.hs)
+data(go.subs.hs)
+
+# focus on biological process subset of GO
+
+gobpsets <- go.sets.hs[go.subs.hs$BP]
+gobpres <- gage(foldchanges, gsets=gobpsets)
+```
+
+```{r}
+head(gobpres$less)
+```
+
+### Reactome
+
+Some folks really like Reactome online (ie their webpage viewer) rather than the R package of the same name (can get from bioconductor).
+
+To use the website viewer we want to upload our set of gene symbols for the genes we want to focus on (here those with a P-value<0.05)
+
+```{r}
+res$symbol <- mapIds(org.Hs.eg.db, 
+                     keys=row.names(res), 
+                     keytype="ENSEMBL",        
+                     column="SYMBOL",         
+                     multiVals="first") 
+
+head(res$symbol)
+```
+
+
+```{r}
+sig_genes <- res[res$padj <= 0.05 & !is.na(res$padj), "symbol"]
+write.table(sig_genes, file="significant_genes.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+Then, to perform pathway analysis online go to the Reactome website (https://reactome.org/PathwayBrowser/#TOOL=AT). Select “choose file” to upload your significant gene list. Then, select the parameters “Project to Humans”, then click “Analyze”.
+
+![](R-HSA-68886.png)
+
+
+
+## Save results
+
+```{r}
+write.csv(res, file="myresults_annotated.csv")
+
+#another option
+# save(res, file="my_results.RData") #save as an R object to be loaded back into R
+```
+

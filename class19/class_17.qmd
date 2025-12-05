@@ -1,0 +1,425 @@
+---
+title: "Class 19: Pertussis Mini Proj"
+author: "Emily Chase (PID A14656894)"
+format: pdf
+toc: true
+---
+
+## Background
+
+Pertussis (aka Whooping cough) is a highly infectious lung infection caused by the bacteria *B. pertussis* .
+
+The CDC tracks case numbers in the US and makes this data available online:
+
+copied table from website
+initiate variable
+assign it to Addins>paste as data.frame --> pastes in the table in data.frame format
+highlight all and go to Code>reformat selection (cmd+shift+A)
+
+```{r, include=FALSE}
+# install.packages("datapasta")
+
+cdc <- data.frame(
+  year = c(
+    1922L,
+    1923L,
+    1924L,
+    1925L,
+    1926L,
+    1927L,
+    1928L,
+    1929L,
+    1930L,
+    1931L,
+    1932L,
+    1933L,
+    1934L,
+    1935L,
+    1936L,
+    1937L,
+    1938L,
+    1939L,
+    1940L,
+    1941L,
+    1942L,
+    1943L,
+    1944L,
+    1945L,
+    1946L,
+    1947L,
+    1948L,
+    1949L,
+    1950L,
+    1951L,
+    1952L,
+    1953L,
+    1954L,
+    1955L,
+    1956L,
+    1957L,
+    1958L,
+    1959L,
+    1960L,
+    1961L,
+    1962L,
+    1963L,
+    1964L,
+    1965L,
+    1966L,
+    1967L,
+    1968L,
+    1969L,
+    1970L,
+    1971L,
+    1972L,
+    1973L,
+    1974L,
+    1975L,
+    1976L,
+    1977L,
+    1978L,
+    1979L,
+    1980L,
+    1981L,
+    1982L,
+    1983L,
+    1984L,
+    1985L,
+    1986L,
+    1987L,
+    1988L,
+    1989L,
+    1990L,
+    1991L,
+    1992L,
+    1993L,
+    1994L,
+    1995L,
+    1996L,
+    1997L,
+    1998L,
+    1999L,
+    2000L,
+    2001L,
+    2002L,
+    2003L,
+    2004L,
+    2005L,
+    2006L,
+    2007L,
+    2008L,
+    2009L,
+    2010L,
+    2011L,
+    2012L,
+    2013L,
+    2014L,
+    2015L,
+    2016L,
+    2017L,
+    2018L,
+    2019L,
+    2020L,
+    2021L,
+    2022L,
+    2023L
+  ),
+  cases = c(
+    107473,
+    164191,
+    165418,
+    152003,
+    202210,
+    181411,
+    161799,
+    197371,
+    166914,
+    172559,
+    215343,
+    179135,
+    265269,
+    180518,
+    147237,
+    214652,
+    227319,
+    103188,
+    183866,
+    222202,
+    191383,
+    191890,
+    109873,
+    133792,
+    109860,
+    156517,
+    74715,
+    69479,
+    120718,
+    68687,
+    45030,
+    37129,
+    60886,
+    62786,
+    31732,
+    28295,
+    32148,
+    40005,
+    14809,
+    11468,
+    17749,
+    17135,
+    13005,
+    6799,
+    7717,
+    9718,
+    4810,
+    3285,
+    4249,
+    3036,
+    3287,
+    1759,
+    2402,
+    1738,
+    1010,
+    2177,
+    2063,
+    1623,
+    1730,
+    1248,
+    1895,
+    2463,
+    2276,
+    3589,
+    4195,
+    2823,
+    3450,
+    4157,
+    4570,
+    2719,
+    4083,
+    6586,
+    4617,
+    5137,
+    7796,
+    6564,
+    7405,
+    7298,
+    7867,
+    7580,
+    9771,
+    11647,
+    25827,
+    25616,
+    15632,
+    10454,
+    13278,
+    16858,
+    27550,
+    18719,
+    48277,
+    28639,
+    32971,
+    20762,
+    17972,
+    18975,
+    15609,
+    18617,
+    6124,
+    2116,
+    3044,
+    7063
+  )
+)
+```
+
+> Q1. Make a plot of pertussis cases per year with ggplot
+
+```{r}
+library(ggplot2)
+
+ggplot(cdc) + aes(x=year, y=cases) + geom_point() + geom_line() 
+
+```
+
+> Q2. Add some annotation (lines on the plot) for some major milestones in our interaction with pertussis. The original wP deployment in 1947 and the newer aP vaccine roll-out in 1996. Finally a line for 2020
+
+```{r}
+ggplot(cdc) + aes(x=year, y=cases) + geom_point() + geom_line() + geom_vline(xintercept = 1947, col="blue") + geom_vline(xintercept = 1996, col="red") + geom_vline(xintercept = 2020, col="gray")
+```
+
+This red line seems to precede a spike in cases. This is likely related to a few different factors, including anti-vaccine movements, slight changes in pertussis strain (and the vaccine needing to catch up), and most importantly how the aP vaccine was shown to require boosters for continued efficacy. aP is the cell-free vaccine, which was an improvement on the wP vaccine which used the whole bacterial cell to inoculate.
+
+## The CMI-PB Project
+
+The CMI-Pertussis Boost (PB) porject focuses on gathering data on this same topic. What is distinct between aP and wP individuals. aP induced protection wanes faster than wP...Why? 
+
+CMI-PB makes their data available via a JSON format returning API. We can read JSON format with the `read_json()` function from the **jsonlite** package
+
+
+```{r}
+# install.packages("jsonlite")
+library(jsonlite)
+
+subject <- read_json("http://cmi-pb.org/api/v5_1/subject", simplifyVector = TRUE)
+head(subject)
+```
+
+
+> Q3. How many "subjects" are in this db?
+
+```{r}
+nrow(subject)
+```
+
+
+> Q4. How many wP and aP primed subjects are there in the dataset?
+
+```{r}
+table(subject$infancy_vac)
+```
+
+> Q5. What is the `biological sex` and `race` breakdown of these subjects? Ie, is this a representative population?
+
+```{r}
+table(subject$race, subject$biological_sex)
+```
+Not a representative sample :(
+
+
+Let's read in more tables from the CMI-PB database API (go to website and get some more links)
+
+```{r}
+specimen <- read_json("http://cmi-pb.org/api/v5_1/specimen", simplifyVector = TRUE)
+ab_titer <- read_json("http://cmi-pb.org/api/v5_1/plasma_ab_titer", simplifyVector = TRUE)
+```
+
+
+A wee peak at these:
+```{r}
+head(specimen)
+```
+
+
+```{r}
+head(ab_titer)
+```
+
+
+Join using the `inner_join()` function from **dplyr**
+
+```{r}
+library(dplyr)
+
+meta <- inner_join(subject, specimen)
+
+head(meta)
+```
+
+```{r}
+ab_data <- inner_join(meta, ab_titer)
+head(ab_data)
+```
+
+
+> Q6. How many different Ab isotypes are there?
+
+```{r}
+unique(ab_data$isotype)
+```
+2 major isotypes (6 including IgG subtypes)
+
+
+
+
+>Q7. How many different antigens are there in the dataset?
+
+```{r}
+unique(ab_data$antigen)
+```
+
+> Q8. Let's plot MFI vs antigen
+
+```{r}
+ggplot(ab_data) + aes(x=MFI, y=antigen) + geom_boxplot()
+```
+
+
+## Focus in IgG
+
+IgG is crucial for long-term immunity and responding to the bacterial and viral infections.
+
+```{r}
+igg <- ab_data |> 
+  filter(isotype == "IgG")
+```
+
+Plot of antigen levels again but for IgG only
+
+```{r}
+ggplot(igg) + aes(MFI_normalised, antigen) + geom_boxplot()
+```
+
+
+
+
+### Differences between aP and wP?
+
+We can color up by the `infancy_vac` values of "wP" or "aP"
+
+```{r}
+ggplot(igg) + aes(MFI_normalised, antigen, col=infancy_vac) + geom_boxplot()
+
+```
+
+We could also "facet" by the "aP" vs "wP" column
+
+```{r}
+ggplot(igg) + aes(MFI_normalised, antigen) + geom_boxplot() + facet_wrap(~infancy_vac)
+
+```
+
+
+
+### Time course analysis
+
+We can use `visit  as a proxy for time and facet our plots by this value 1 to 8 ...
+```{r}
+table(ab_data$visit) # it's an ongoing study so more recent visits are still collecting data
+```
+
+
+```{r}
+igg |> 
+  filter(visit %in% 1:8) |>
+  ggplot() + aes(MFI_normalised, antigen, col=infancy_vac) + geom_boxplot() + facet_wrap(~visit, nrow=2)
+
+```
+
+
+## Time course of PT (Virulence Factor: Persussis Toxin)
+
+```{r}
+pt <- igg |> 
+  filter(antigen == "PT") |> 
+  filter(dataset == "2021_dataset")
+  
+```
+
+
+```{r}
+ggplot(pt) + 
+  aes(planned_day_relative_to_boost, 
+      MFI_normalised, 
+      col=infancy_vac,
+      group=subject_id) +
+  geom_point() + 
+  geom_line() +
+  geom_vline(xintercept = 14, col="blue")
+```
+
+## System setup
+
+```{r}
+sessionInfo()
+```
+
+
